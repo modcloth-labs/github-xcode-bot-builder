@@ -46,12 +46,10 @@ class BotGithub
           # Build has passed or failed so update status and comment on the issue
           create_comment_for_bot_status(pr, bot)
           create_status(pr, github_state_new, convert_bot_status_to_github_description(bot), bot.status_url)
-        elsif (github_state_cur == :unknown)
+        elsif (github_state_cur == :unknown || user_requested_retest(pr, bot))
           # Unknown state occurs when there's a new commit so trigger a new build
           BotBuilder.instance.start_bot(bot.guid)
           create_status_new_build(pr)
-        elsif (user_requested_retest(pr, bot))
-          BotBuilder.instance.start_bot(bot.guid)
         else
           puts "PR #{pr.number} (#{github_state_cur}) is up to date for bot #{bot.short_name}"
         end
@@ -123,8 +121,13 @@ class BotGithub
   def latest_github_state(pr)
     statuses = @client.statuses(BotConfig.instance.github_repo, pr.sha)
     status = OpenStruct.new
-    status.state = statuses[0].state.to_sym
-    status.updated_at = statuses[0].updated_at
+    if (statuses.count == 0)
+      status.state = :unknown
+      status.updated_at = Time.now
+    else
+      status.state = statuses[0].state.to_sym
+      status.updated_at = statuses[0].updated_at
+    end
     status
   end
 
