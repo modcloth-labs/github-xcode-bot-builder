@@ -58,9 +58,9 @@ class BotBuilder
                     pollForSCMChanges: false,
                     buildOnTrigger: false,
                     buildFromClean: true,
-                    integratePerformsAnalyze: true,
-                    integratePerformsTest: true,
-                    integratePerformsArchive: false,
+                    integratePerformsAnalyze: BotConfig.instance.xcode_run_analyzer,
+                    integratePerformsTest: BotConfig.instance.xcode_run_test,
+                    integratePerformsArchive: BotConfig.instance.xcode_create_archive,
                     deviceSpecification: "specificDevices",
                     deviceInfo: device_guids
                 },

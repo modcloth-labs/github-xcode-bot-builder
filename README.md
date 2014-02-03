@@ -25,6 +25,9 @@ xcode_server = 192.168.10.123
 xcode_devices = iphonesimulator iPhone Retina (4-inch) 7.0|iphonesimulator iPhone Retina (4-inch) 6.1
 xcode_scheme = Some-Scheme-Name-app
 xcode_project_or_workspace = SomeProject.xcworkspace # or SomeProject.xcproject
+xcode_run_analyzer = 1 # or 0 to not run the analyzer
+xcode_run_test = 1 # or 0 to not run the tests
+xcode_create_archive = 1 # or 0 to not create an archive
 ```
 
 Note that *xcode_devices* need to be pipe delimited. To get the list of available devices run the bot-devices command.

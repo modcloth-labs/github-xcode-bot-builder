@@ -14,7 +14,7 @@ class BotConfig
     @config = ParseConfig.new(@filename)
 
     # Make sure every param is configured properly since param will throw an error for a missing key
-    [:xcode_server, :github_url, :github_repo, :github_access_token, :xcode_devices, :xcode_scheme, :xcode_project_or_workspace].each do |key|
+    [:xcode_server, :github_url, :github_repo, :github_access_token, :xcode_devices, :xcode_scheme, :xcode_project_or_workspace, :xcode_run_analyzer, :xcode_run_test, :xcode_create_archive].each do |key|
       param key
     end
   end
@@ -45,6 +45,18 @@ class BotConfig
 
   def xcode_project_or_workspace
     param :xcode_project_or_workspace
+  end
+
+  def xcode_run_analyzer
+    param :xcode_run_analyzer
+  end
+
+  def xcode_run_test
+    param :xcode_run_test
+  end
+
+  def xcode_create_archive
+    param :xcode_create_archive
   end
 
   def param(key)
