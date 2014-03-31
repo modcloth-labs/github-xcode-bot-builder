@@ -1,5 +1,6 @@
 require 'bot_builder'
 require 'bot_github'
+require 'bot_configuration'
 
 # Patch net/http to set a reasonable open_timeout to prevent hanging
 module Net
@@ -14,6 +15,10 @@ module Net
 end
 
 class BotCli
+
+def initialize()
+  @configuration = BotConfiguration.new('~/Desktop/test.json')
+end
 
 def delete(args)
     guid = args[0]
@@ -33,7 +38,13 @@ def delete(args)
   end
 
   def sync_github(args)
-    BotGithub.instance.sync
+    client = Octokit::Client.new(:access_token => BotConfig.instance.github_access_token)
+    client.login
+
+    @configuration.repos.each do |repo|
+      github = BotGithub.new(client, repo)
+      github.sync
+    end
   end
 
 end

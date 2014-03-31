@@ -3,6 +3,21 @@
 #  Created on 2013-10-23.
 #  Copyright (c) 2013. All rights reserved.
 
+require 'pp'
+
+def already_running?
+  running_instances = `ps aux | grep [b]ot-sync-github | grep -v bin/sh`.split("\n")
+  running_instances.count > 1
+end
+
+
+if (already_running?)
+	$stderr.puts "Skipping run since bot-sync-github is already running"
+ 	PP.pp(running_instances, STDERR)
+    exit 1
+end
+
+
 $LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__) + "/../lib"))
 require "bot_cli"
 

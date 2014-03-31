@@ -5,22 +5,16 @@ require 'bot_builder'
 require 'ostruct'
 
 class BotGithub
-  include Singleton
+  attr_accessor :repo, :client
 
-  def initialize
-    @client = Octokit::Client.new :access_token => BotConfig.instance.github_access_token
-    @client.login
+  def initialize(repo, client)
+    self.repo = repo
+    self.client = client
   end
+
 
   def sync
     puts "\nStarting Github Xcode Bot Builder #{Time.now}\n-----------------------------------------------------------"
-    # Check to see if we're already running and skip this run if so
-    running_instances = `ps aux | grep [b]ot-sync-github | grep -v bin/sh`.split("\n")
-    if (running_instances.count > 1)
-      $stderr.puts "Skipping run since bot-sync-github is already running"
-      PP.pp(running_instances, STDERR)
-      exit 1
-    end
 
     bot_statuses = BotBuilder.instance.status_of_all_bots
     bots_processed = []
@@ -31,7 +25,7 @@ class BotGithub
       if (bot.nil?)
         # Create a new bot
         BotBuilder.instance.create_bot(pr.bot_short_name, pr.bot_long_name, pr.branch,
-                                       BotConfig.instance.scm_path,
+                                       self.repo.github_url,
                                        BotConfig.instance.xcode_project_or_workspace,
                                        BotConfig.instance.xcode_scheme,
                                        BotConfig.instance.xcode_devices)
@@ -60,6 +54,7 @@ class BotGithub
     bots_unprocessed = bot_statuses.keys - bots_processed
     bots_unprocessed.each do |bot_short_name|
       bot = bot_statuses[bot_short_name]
+      # TODO: BotBuilder.instance.remove_outdated_bots(self.repo)
       BotBuilder.instance.delete_bot(bot.guid) unless !is_managed_bot(bot)
     end
 
@@ -98,7 +93,7 @@ class BotGithub
   def create_comment_for_bot_status(pr, bot)
     message = "Build " + convert_bot_status_to_github_state(bot).to_s.capitalize + ": " + convert_bot_status_to_github_description(bot)
     message += "\n#{bot.status_url}"
-    @client.add_comment(BotConfig.instance.github_repo, pr.number, message)
+    self.client.add_comment(self.repo.github_repo, pr.number, message)
     puts "PR #{pr.number} added comment \"#{message}\""
   end
 
@@ -114,12 +109,12 @@ class BotGithub
     if (!target_url.nil?)
       options['target_url'] = target_url
     end
-    @client.create_status(BotConfig.instance.github_repo, pr.sha, github_state.to_s, options)
+    @client.create_status(self.repo.github_repo, pr.sha, github_state.to_s, options)
     puts "PR #{pr.number} status updated to \"#{github_state}\" with description \"#{description}\""
   end
 
   def latest_github_state(pr)
-    statuses = @client.statuses(BotConfig.instance.github_repo, pr.sha)
+    statuses = self.client.statuses(self.repo.github_repo, pr.sha)
     status = OpenStruct.new
     if (statuses.count == 0)
       status.state = :unknown
@@ -132,31 +127,27 @@ class BotGithub
   end
 
   def pull_requests
-    github_repo = BotConfig.instance.github_repo
-    responses = @client.pull_requests(github_repo)
-    prs = []
-    responses.each do |response|
-      pr = OpenStruct.new
-      pr.sha = response.head.sha
-      pr.branch = response.head.ref
-      pr.title = response.title
-      pr.state = response.state
-      pr.number = response.number
-      pr.updated_at = response.updated_at
-      pr.bot_short_name = bot_short_name(pr)
-      pr.bot_short_name_without_version = bot_short_name_without_version(pr)
-      pr.bot_long_name = bot_long_name(pr)
-      prs << pr
+    responses = self.client.pull_requests(self.repo.github_repo)
+    responses.collect do |response|
+      pull_request = OpenStruct.new
+      pull_request.sha = response.head.sha
+      pull_request.branch = response.head.ref
+      pull_request.title = response.title
+      pull_request.state = response.state
+      pull_request.number = response.number
+      pull_request.updated_at = response.updated_at
+      pull_request.bot_short_name = bot_short_name(pr)
+      pull_request.bot_short_name_without_version = bot_short_name_without_version(pr)
+      pull_request.bot_long_name = bot_long_name(pr)
+      pull_request
     end
-    prs
   end
 
   def user_requested_retest(pr, bot)
     should_retest = false
-    github_repo = BotConfig.instance.github_repo
 
     # Check for a user retest request comment
-    comments = @client.issue_comments(github_repo, pr.number)
+    comments = self.client.issue_comments(self.repo.github_repo, pr.number)
     latest_retest_time = Time.at(0)
     found_retest_comment = false
     comments.each do |comment|
@@ -183,8 +174,7 @@ class BotGithub
   end
 
   def bot_long_name(pr)
-    github_repo = BotConfig.instance.github_repo
-    "PR #{pr.number} #{pr.title} #{github_repo}"
+    "PR #{pr.number} #{pr.title} #{self.repo.github_repo}"
   end
 
   def bot_short_name(pr)
@@ -204,8 +194,7 @@ class BotGithub
   end
 
   def bot_short_name_suffix
-    github_repo = BotConfig.instance.github_repo.downcase
-    ('_' + github_repo + '_v').gsub(/[^[:alnum:]]/, '_')
+    ('_' + self.repo.github_repo.downcase + '_v').gsub(/[^[:alnum:]]/, '_')
   end
 
 end
