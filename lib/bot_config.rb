@@ -19,6 +19,10 @@ class BotConfig
     end
   end
 
+  def optional_params
+    [:api_endpoint, :web_endpoint]
+  end
+
   def xcode_server_hostname
     param :xcode_server
   end
@@ -69,7 +73,7 @@ class BotConfig
 
   def param(key)
     value = @config[key.to_s]
-    if (value.nil?)
+    if (value.nil? && !optional_params.include?(key))
       $stderr.puts "Missing configuration key #{key} in #{@filename}"
       exit 1
     end

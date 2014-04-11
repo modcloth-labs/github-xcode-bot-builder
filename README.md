@@ -28,10 +28,13 @@ xcode_project_or_workspace = SomeProject.xcworkspace # or SomeProject.xcproject
 xcode_run_analyzer = 1 # or 0 to not run the analyzer
 xcode_run_test = 1 # or 0 to not run the tests
 xcode_create_archive = 1 # or 0 to not create an archive
+api_endpoint = https://enterprise.domain.com/api/v3
+web_endpoint = https://enterprise.domain.com
 ```
 
 Note that *xcode_devices* need to be pipe delimited. To get the list of available devices run the bot-devices command.
 The *xcode_server* can either be an ip address or a hostname.
+The api_endpoint and web_endpoint urls can be configured if you use a github enterprise setup, otherwise they can be omitted.
 
 Manually run **bot-sync-github** from the command line to make sure it works
 
@@ -71,6 +74,7 @@ Contributors
  - [Geoffery Nix](http://github.com/geoffnix)
  - [Two Bit Labs](http://twobitlabs.com/)
  - [Todd Huss](http://github.com/thuss)
+ - [Dave Kasper](http://github.com/dkasper)
 
 Copyright
 =========
