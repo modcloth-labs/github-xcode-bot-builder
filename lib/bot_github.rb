@@ -8,6 +8,8 @@ class BotGithub
   include Singleton
 
   def initialize
+    Octokit.api_endpoint = BotConfig.instance.api_endpoint if BotConfig.instance.api_endpoint 
+    Octokit.web_endpoint = BotConfig.instance.web_endpoint if BotConfig.instance.web_endpoint 
     @client = Octokit::Client.new :access_token => BotConfig.instance.github_access_token
     @client.login
   end

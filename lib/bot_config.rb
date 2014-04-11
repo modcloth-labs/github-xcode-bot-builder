@@ -14,9 +14,13 @@ class BotConfig
     @config = ParseConfig.new(@filename)
 
     # Make sure every param is configured properly since param will throw an error for a missing key
-    [:xcode_server, :github_url, :github_repo, :github_access_token, :xcode_devices, :xcode_scheme, :xcode_project_or_workspace, :xcode_run_analyzer, :xcode_run_test, :xcode_create_archive].each do |key|
+    [:xcode_server, :github_url, :github_repo, :github_access_token, :xcode_devices, :xcode_scheme, :xcode_project_or_workspace, :xcode_run_analyzer, :xcode_run_test, :xcode_create_archive, :api_endpoint, :web_endpoint].each do |key|
       param key
     end
+  end
+
+  def optional_params
+    [:api_endpoint, :web_endpoint]
   end
 
   def xcode_server_hostname
@@ -59,9 +63,17 @@ class BotConfig
     param :xcode_create_archive
   end
 
+  def api_endpoint
+    param :api_endpoint
+  end
+
+  def web_endpoint
+    param :web_endpoint
+  end
+
   def param(key)
     value = @config[key.to_s]
-    if (value.nil?)
+    if (value.nil? && !optional_params.include?(key))
       $stderr.puts "Missing configuration key #{key} in #{@filename}"
       exit 1
     end
