@@ -8,8 +8,8 @@ class BotGithub
   include Singleton
 
   def initialize
-    Octokit.api_endpoint = BotConfig.instance.api_endpoint if BotConfig.instance.api_endpoint 
-    Octokit.web_endpoint = BotConfig.instance.web_endpoint if BotConfig.instance.web_endpoint 
+    Octokit.api_endpoint = BotConfig.instance.api_endpoint if BotConfig.instance.api_endpoint
+    Octokit.web_endpoint = BotConfig.instance.web_endpoint if BotConfig.instance.web_endpoint
     @client = Octokit::Client.new :access_token => BotConfig.instance.github_access_token
     @client.login
   end
@@ -41,17 +41,18 @@ class BotGithub
       else
         github_state_cur = latest_github_state(pr).state # :unknown :pending :success :error :failure
         github_state_new = convert_bot_status_to_github_state(bot)
+
         if (github_state_new == :pending && github_state_cur != github_state_new)
           # User triggered a new build by clicking Integrate on the Xcode server interface
-          create_status(pr, github_state_new, convert_bot_status_to_github_description(bot), bot.status_url)
-        elsif (github_state_new != :unknown && github_state_cur != github_state_new)
-          # Build has passed or failed so update status and comment on the issue
-          create_comment_for_bot_status(pr, bot)
           create_status(pr, github_state_new, convert_bot_status_to_github_description(bot), bot.status_url)
         elsif (github_state_cur == :unknown || user_requested_retest(pr, bot))
           # Unknown state occurs when there's a new commit so trigger a new build
           BotBuilder.instance.start_bot(bot.guid)
           create_status_new_build(pr)
+        elsif (github_state_new != :unknown && github_state_cur != github_state_new)
+          # Build has passed or failed so update status and comment on the issue
+          create_comment_for_bot_status(pr, bot)
+          create_status(pr, github_state_new, convert_bot_status_to_github_description(bot), bot.status_url)
         else
           puts "PR #{pr.number} (#{github_state_cur}) is up to date for bot #{bot.short_name}"
         end
