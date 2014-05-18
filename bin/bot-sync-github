@@ -6,7 +6,7 @@
 require 'pp'
 
 def already_running?
-  running_instances = `ps aux | grep [b]ot-sync-github | grep -v bin/sh`.split("\n")
+  running_instances = `ps aux | grep [b]ot-sync-github | grep -v grep`.split("\n")
   running_instances.count > 1
 end
 

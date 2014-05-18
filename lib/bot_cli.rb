@@ -15,36 +15,54 @@ module Net
 end
 
 class BotCli
-
 def initialize()
-  @configuration = BotConfiguration.new('~/Desktop/test.json')
+  @configuration = BotConfiguration.new('~/xcode_bot_builder.json')
 end
 
 def delete(args)
-    guid = args[0]
-    if (guid == nil || guid.empty?)
-      $stderr.puts "Missing guid of bot to delete"
-      exit 1
+  guid = args[0]
+  if (guid == nil || guid.empty?)
+    $stderr.puts "Missing guid of bot to delete"
+    exit 1
+  end
+  BotBuilder.instance.delete_bot guid
+end
+
+def status(args)
+  BotBuilder.instance.status
+end
+
+def devices(args)
+  bot_builder = BotBuilder.new(@configuration.xcode_server, nil, nil)
+  bot_builder.devices
+end
+
+def xcode_config(xcode, repo)
+  config = xcode
+  if repo.run_analyzer != nil
+    config.run_analyzer = repo.run_analyzer
+  end
+  if repo.run_test != nil
+    config.run_test = repo.run_test
+  end
+  if repo.create_archive != nil
+    config.create_archive = repo.create_archive
+  end
+  config
+end
+
+def sync_github(args)
+  Octokit.api_endpoint = BotConfig.instance.api_endpoint if BotConfig.instance.api_endpoint
+  Octokit.web_endpoint = BotConfig.instance.web_endpoint if BotConfig.instance.web_endpoint
+  client = Octokit::Client.new(:access_token => @configuration.github_access_token)
+  client.login
+
+  @configuration.repos.each do |repo|
+    repo.bots.each_with_index do |bot, index|
+      bot_builder = BotBuilder.new(@configuration.xcode_server, repo.project_or_workspace, bot)
+      github = BotGithub.new(client, bot_builder, repo.github_repo, bot.scheme)
+      update_github = index == repo.bots.length-1
+      github.sync(update_github)
     end
-    BotBuilder.instance.delete_bot guid
   end
-
-  def status(args)
-    BotBuilder.instance.status
-  end
-
-  def devices(args)
-    BotBuilder.instance.devices
-  end
-
-  def sync_github(args)
-    client = Octokit::Client.new(:access_token => BotConfig.instance.github_access_token)
-    client.login
-
-    @configuration.repos.each do |repo|
-      github = BotGithub.new(client, repo)
-      github.sync
-    end
-  end
-
 end
