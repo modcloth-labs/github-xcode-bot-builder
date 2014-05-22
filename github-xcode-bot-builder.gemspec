@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.version = "0.0.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["ModCloth", "Two Bit Labs", "Geoffery Nix", "Todd Huss"]
-  s.date = "2013-12-13"
+  s.authors = ["ModCloth", "Two Bit Labs", "Geoffery Nix", "Todd Huss", "Banno"]
+  s.date = "2014-05-20"
   s.description = "A command line tool that can be run via cron that configures and manages Xcode server bots for each pull request"
   s.email = ""
   s.executables = ["bot-sync-github", "bot-devices", "bot-status", "bot-delete"]
@@ -33,7 +33,7 @@ Gem::Specification.new do |s|
     "github-xcode-bot-builder.gemspec",
     "lib/bot_builder.rb",
     "lib/bot_cli.rb",
-    "lib/bot_config.rb",
+    "lib/bot_configuration.rb",
     "lib/bot_github.rb",
     "spec/github_xcode_bot_builder_spec.rb",
     "spec/spec_helper.rb"
@@ -41,7 +41,7 @@ Gem::Specification.new do |s|
   s.homepage = "http://github.com/ModCloth/github-xcode-bot-builder"
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
-  s.rubygems_version = "2.0.3"
+  s.rubygems_version = "2.0.14"
   s.summary = "Create Xcode bots to run when github pull requests are created or updated"
 
   if s.respond_to? :specification_version then
