@@ -30,17 +30,28 @@ class BotBuilder
     end
   end
 
-  def create_bot(short_name, long_name, branch, scm_url)
+  def github_ssh_url(github_repo)
+    "git@github.com:#{github_repo}.git"
+  end
+
+  def github_https_url(github_repo)
+    "https://github.com/#{github_repo}.git"
+  end
+
+  def create_bot(short_name, long_name, branch, repo)
     device_guids = find_guids_for_devices(bot.devices)
     if (device_guids.count != bot.devices.count)
       puts "Some of the following devices could not be found on the server: #{devices}"
       exit 1
     end
 
-    scm_guid = find_guid_for_scm_url(scm_url)
+    scm_guid = find_guid_for_scm_url(github_ssh_url(repo))
     if (scm_guid.nil? || scm_guid.empty?)
-      puts "Could not find repository on the server #{scm_url}"
-      exit 1
+      scm_guid = find_guid_for_scm_url(github_https_url(repo))
+      if (scm_guid.nil? || scm_guid.empty?)
+        puts "Could not find repository on the server #{scm_url}"
+        exit 1
+      end
     end
 
     # Create the bot

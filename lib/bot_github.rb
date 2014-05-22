@@ -21,10 +21,6 @@ class BotGithub
     end.compact
   end
 
-  def github_url(github_repo)
-    "git@github.com:#{github_repo}.git"
-  end
-
   def sync(update_github)
     puts "\nStarting Github Xcode Bot Builder #{Time.now}\n-----------------------------------------------------------"
     # TODO: Need to clean up update_github, possibly by separating sync into the bot maintenance and github
@@ -36,7 +32,7 @@ class BotGithub
       bots_processed << pr.bot_short_name
       if (bot.nil?)
         # Create a new bot
-        self.bot_builder.create_bot(pr.bot_short_name, pr.bot_long_name, pr.branch, github_url(github_repo))
+        self.bot_builder.create_bot(pr.bot_short_name, pr.bot_long_name, pr.branch, github_repo)
         if update_github
           create_status_new_build(pr, bots_for_pull_request(bot_statuses, pr))
         end
