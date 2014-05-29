@@ -15,6 +15,7 @@ module Net
 end
 
 class BotCli
+
 def initialize()
   @configuration = BotConfiguration.new('~/xcode_bot_builder.json')
 end
@@ -52,8 +53,8 @@ def xcode_config(xcode, repo)
 end
 
 def sync_github(args)
-  Octokit.api_endpoint = BotConfig.instance.api_endpoint if BotConfig.instance.api_endpoint
-  Octokit.web_endpoint = BotConfig.instance.web_endpoint if BotConfig.instance.web_endpoint
+  Octokit.api_endpoint = @configuration.api_endpoint if @configuration.api_endpoint
+  Octokit.web_endpoint = @configuration.web_endpoint if @configuration.web_endpoint
   client = Octokit::Client.new(:access_token => @configuration.github_access_token)
   client.login
 
@@ -65,4 +66,6 @@ def sync_github(args)
       github.sync(update_github)
     end
   end
+end
+
 end

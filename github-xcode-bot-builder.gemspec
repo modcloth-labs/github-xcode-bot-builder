@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.version = "0.0.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["ModCloth", "Two Bit Labs", "Geoffery Nix", "Todd Huss"]
+  s.authors = ["ModCloth", "Two Bit Labs", "Geoffery Nix", "Todd Huss", "Banno"]
   s.date = "2013-12-13"
   s.description = "A command line tool that can be run via cron that configures and manages Xcode server bots for each pull request"
   s.email = ""
