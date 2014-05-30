@@ -15,6 +15,7 @@ module Net
 end
 
 class BotCli
+
 def initialize()
   @configuration = BotConfiguration.new('~/xcode_bot_builder.json')
 end
