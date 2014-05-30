@@ -58,37 +58,35 @@ class BotBuilder
     buildSchemeKey = (self.project_path =~ /xcworkspace/) ? :buildWorkspacePath : :buildProjectPath
 
     service_requests = [
-        service_request('createBotWithProperties:', [
-            {
-                shortName: short_name,
-                longName: long_name,
-                extendedAttributes: {
-                    scmInfo: {
-                        "/" => {
-                            scmBranch: branch,
-                        }
-                    },
-                    scmInfoGUIDMap: {
-                        "/" => scm_guid
-                    },
-                    buildSchemeKey => self.project_path,
-                    buildSchemeName: self.bot.scheme,
-                    pollForSCMChanges: false,
-                    buildOnTrigger: false,
-                    buildFromClean: true,
-                    integratePerformsAnalyze: self.bot.run_analyzer,
-                    integratePerformsTest: self.bot.run_test,
-                    integratePerformsArchive: self.bot.create_archive,
-                    deviceSpecification: "specificDevices",
-                    deviceInfo: device_guids
-                },
-                notifyCommitterOnSuccess: false,
-                notifyCommitterOnFailure: false,
-                type: "com.apple.entity.Bot"
-            }
-
-
-        ])
+      service_request('createBotWithProperties:', [
+        {
+          shortName: short_name,
+          longName: long_name,
+          extendedAttributes: {
+            cmInfo: {
+            "/" => {
+                scmBranch: branch,
+              }
+            },
+            scmInfoGUIDMap: {
+              "/" => scm_guid
+            },
+            buildSchemeKey => self.project_path,
+            buildSchemeName: self.bot.scheme,
+            pollForSCMChanges: false,
+            buildOnTrigger: false,
+            buildFromClean: true,
+            integratePerformsAnalyze: self.bot.run_analyzer,
+            integratePerformsTest: self.bot.run_test,
+            integratePerformsArchive: self.bot.create_archive,
+            deviceSpecification: "specificDevices",
+            deviceInfo: device_guids
+          },
+          notifyCommitterOnSuccess: false,
+          notifyCommitterOnFailure: false,
+          type: "com.apple.entity.Bot"
+        }
+      ])
     ]
     bot_info = batch_service_request(service_requests)
     bot_guid = bot_info['responses'][0]['response']['guid']
@@ -111,10 +109,10 @@ class BotBuilder
     # While running: latest_run_status "running" run_sub_status ""
     # After completion: latest_run_status "completed" run_sub_status "build-failed|build-errors|test-failures|warnings|analysis-issues|succeeded"
     service_requests = [ service_request('query:', [
-        {
-            fields: ['guid','tinyID','latestRunStatus','latestRunSubStatus','longName'],
-            entityTypes: ["com.apple.entity.Bot"]
-        }
+      {
+        fields: ['guid','tinyID','latestRunStatus','latestRunSubStatus','longName'],
+        entityTypes: ["com.apple.entity.Bot"]
+      }
     ], 'SearchService') ]
     status_info = batch_service_request(service_requests)
     results =  status_info['responses'][0]['response']['results']
@@ -168,14 +166,14 @@ class BotBuilder
 
   def find_guids_for_devices(devices)
     device_info = get_device_info
-    device_guids = []
+    device_guids = {}
     device_info.each do |device|
-      device_string = device_string_for_device device
+      device_string = device_string_for_device(device)
       if (devices.include? device_string)
-        device_guids << device['guid']
+        device_guids.store(device_string, device['guid'])
       end
     end
-    device_guids
+    device_guids.values
   end
 
   def device_string_for_device(device)
@@ -185,7 +183,7 @@ class BotBuilder
   def get_device_info
     # Put to get device and Device Info
     service_requests = [
-        service_request('allDevices', [])
+      service_request('allDevices', [])
     ]
     device_info = batch_service_request(service_requests)['responses'][0]['response']
     device_info
@@ -194,7 +192,7 @@ class BotBuilder
   def get_scm_info
     # Put to get device and Device Info
     service_requests = [
-        service_request('findAllSCMInfos', [])
+      service_request('findAllSCMInfos', [])
     ]
     scm_info = batch_service_request(service_requests)['responses'][0]['response']
     scm_info
@@ -212,8 +210,8 @@ class BotBuilder
 
   def batch_service_request(service_requests)
     payload = {
-        type: 'com.apple.BatchServiceRequest' ,
-        requests: service_requests
+      type: 'com.apple.BatchServiceRequest' ,
+      requests: service_requests
     }
     http = Net::HTTP.new(@server)
     request = Net::HTTP::Put.new('/collabdproxy')
@@ -230,12 +228,12 @@ class BotBuilder
   def service_request(name, arguments, service = 'XCBotService')
     get_session_guid
     {
-        type: 'com.apple.ServiceRequest',
-        arguments: arguments,
-        sessionGUID: @session_guid,
-        serviceName: service,
-        methodName: name,
-        expandReferencedObjects: false
+      type: 'com.apple.ServiceRequest',
+      arguments: arguments,
+      sessionGUID: @session_guid,
+      serviceName: service,
+      methodName: name,
+      expandReferencedObjects: false
     }
   end
 
