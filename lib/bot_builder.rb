@@ -170,9 +170,6 @@ class BotBuilder
     results.each do |result|
       integration = OpenStruct.new result['entity']
       integration.status = (integration.status.nil? || integration.status.empty?) ? :unknown : integration.status.to_sym
-      #puts "*******************************************"
-      #puts integration
-      #puts "*******************************************"
       integrations[integration.integration] = integration
     end
     integrations
