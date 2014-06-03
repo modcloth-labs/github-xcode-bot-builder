@@ -134,9 +134,6 @@ class BotBuilder
   end
 
   def status_of_bot(bot_guid)
-    # After immediately creating: latest_run_status "" run_sub_status ""
-    # While running: latest_run_status "running" run_sub_status ""
-    # After completion: latest_run_status "completed" run_sub_status "build-failed|build-errors|test-failures|warnings|analysis-issues|succeeded"
     service_requests = [ service_request('query:', [
       {
         query: {
