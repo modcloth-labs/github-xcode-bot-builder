@@ -26,11 +26,13 @@ def delete(args)
     $stderr.puts "Missing guid of bot to delete"
     exit 1
   end
-  BotBuilder.instance.delete_bot guid
+  bot_builder = BotBuilder.new(@configuration.xcode_server, nil, nil)
+  bot_builder.delete_bot guid
 end
 
 def status(args)
-  BotBuilder.instance.status
+  bot_builder = BotBuilder.new(@configuration.xcode_server, nil, nil)
+  bot_builder.status
 end
 
 def devices(args)
