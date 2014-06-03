@@ -105,7 +105,6 @@ class BotBuilder
         puts "BOT Integration ##{id} Canceled"
         return
       end
-
     end
   end
 
@@ -115,11 +114,23 @@ class BotBuilder
   end
 
   def start_bot(bot_guid)
-    # TODO: May want to loop through and cancel all integrations
     cancel_bot(bot_guid)
-    service_requests = [ service_request('startBotRunForBotGUID:', [bot_guid]) ]
-    bot_start_info = batch_service_request(service_requests)
-    puts "BOT Started #{bot_guid}"
+    if integration_queued(bot_guid)
+      puts "BOT Already Queued #{bot_guid}"
+    else
+      service_requests = [ service_request('startBotRunForBotGUID:', [bot_guid]) ]
+      bot_start_info = batch_service_request(service_requests)
+      puts "BOT Started #{bot_guid}"
+    end
+  end
+
+  def integration_queued(bot_guid)
+    status_of_bot(bot_guid).each do |id, integration|
+      if integration.status == :ready
+        return true
+      end
+    end
+    return false
   end
 
   def status_of_bot(bot_guid)
