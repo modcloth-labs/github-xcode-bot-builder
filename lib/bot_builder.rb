@@ -98,10 +98,73 @@ class BotBuilder
     bot_guid
   end
 
+  def cancel_bot(bot_guid)
+    status_of_bot(bot_guid).each do |id, integration|
+      if integration.status == :running or integration.status == :ready
+        cancel_bot_integration(integration.guid)
+        puts "BOT Integration ##{id} Canceled"
+        return
+      end
+
+    end
+  end
+
+  def cancel_bot_integration(integration_guid)
+    service_requests = [ service_request('cancelBotRunWithGUID:', [integration_guid]) ]
+    bot_start_info = batch_service_request(service_requests)
+  end
+
   def start_bot(bot_guid)
+    # TODO: May want to loop through and cancel all integrations
+    cancel_bot(bot_guid)
     service_requests = [ service_request('startBotRunForBotGUID:', [bot_guid]) ]
     bot_start_info = batch_service_request(service_requests)
     puts "BOT Started #{bot_guid}"
+  end
+
+  def status_of_bot(bot_guid)
+    # After immediately creating: latest_run_status "" run_sub_status ""
+    # While running: latest_run_status "running" run_sub_status ""
+    # After completion: latest_run_status "completed" run_sub_status "build-failed|build-errors|test-failures|warnings|analysis-issues|succeeded"
+    service_requests = [ service_request('query:', [
+      {
+        query: {
+          and: [
+            {
+              or: [
+                {
+                  match: 'com.apple.entity.BotRun',
+                  field: 'type',
+                  exact: true
+                }
+              ]
+            },
+            {
+              match: bot_guid,
+              field: 'ownerGUID',
+              exact: true
+            }
+          ]
+        },
+        fields: ['tinyID','longName','shortName','type','createTime','startTime','endTime','status','subStatus','integration'],
+        subFields: {},
+        sortFields: ['createTime'],
+        range: [0, 26],
+        onlyDeleted: false
+      }
+    ], 'SearchService') ]
+    status_info = batch_service_request(service_requests)
+    results =  status_info['responses'][0]['response']['results']
+    integrations = {}
+    results.each do |result|
+      integration = OpenStruct.new result['entity']
+      integration.status = (integration.status.nil? || integration.status.empty?) ? :unknown : integration.status.to_sym
+      #puts "*******************************************"
+      #puts integration
+      #puts "*******************************************"
+      integrations[integration.integration] = integration
+    end
+    integrations
   end
 
   def status_of_all_bots
