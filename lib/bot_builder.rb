@@ -39,6 +39,7 @@ class BotBuilder
   end
 
   def create_bot(short_name, long_name, branch, repo)
+    puts "Creating bot: #{short_name} - #{long_name} - #{branch} - #{repo}"
     device_guids = find_guids_for_devices(bot.devices)
     if (device_guids.count != bot.devices.count)
       puts "Some of the following devices could not be found on the server: #{devices}"
@@ -63,7 +64,7 @@ class BotBuilder
           shortName: short_name,
           longName: long_name,
           extendedAttributes: {
-            cmInfo: {
+            scmInfo: {
             "/" => {
                 scmBranch: branch,
               }
