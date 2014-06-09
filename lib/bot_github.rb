@@ -1,22 +1,30 @@
 require 'octokit'
 require 'singleton'
-require 'bot_config'
 require 'bot_builder'
 require 'ostruct'
 
 class BotGithub
-  attr_accessor :repo, :client
+  attr_accessor :client, :bot_builder, :github_repo, :scheme
 
-  def initialize(repo, client)
-    self.repo = repo
+  def initialize(client, bot_builder, github_repo, scheme)
     self.client = client
+    self.bot_builder = bot_builder
+    self.github_repo = github_repo
+    self.scheme = scheme
   end
 
+  def bots_for_pull_request(bot_statuses, pr)
+    bot_statuses.map do |bot_short_name_without_version, bot|
+      if bot.pull_request == pr.number && bot.github_repo == pr.github_repo
+        bot
+      end
+    end.compact
+  end
 
-  def sync
+  def sync(update_github)
     puts "\nStarting Github Xcode Bot Builder #{Time.now}\n-----------------------------------------------------------"
-
-    bot_statuses = BotBuilder.instance.status_of_all_bots
+    # TODO: Need to clean up update_github, possibly by separating sync into the bot maintenance and github
+    bot_statuses = self.bot_builder.status_of_all_bots
     bots_processed = []
     pull_requests.each do |pr|
       # Check if a bot exists for this PR
@@ -24,26 +32,32 @@ class BotGithub
       bots_processed << pr.bot_short_name
       if (bot.nil?)
         # Create a new bot
-        BotBuilder.instance.create_bot(pr.bot_short_name, pr.bot_long_name, pr.branch,
-                                       self.repo.github_url,
-                                       BotConfig.instance.xcode_project_or_workspace,
-                                       BotConfig.instance.xcode_scheme,
-                                       BotConfig.instance.xcode_devices)
-        create_status_new_build(pr)
+        self.bot_builder.create_bot(pr.bot_short_name, pr.bot_long_name, pr.branch, github_repo)
+        if update_github
+          create_status_new_build(pr, bots_for_pull_request(bot_statuses, pr))
+        end
       else
+        bots = bots_for_pull_request(bot_statuses, pr)
         github_state_cur = latest_github_state(pr).state # :unknown :pending :success :error :failure
-        github_state_new = convert_bot_status_to_github_state(bot)
+        github_state_new = convert_all_bot_status_to_github_state(bots)
+
         if (github_state_new == :pending && github_state_cur != github_state_new)
           # User triggered a new build by clicking Integrate on the Xcode server interface
-          create_status(pr, github_state_new, convert_bot_status_to_github_description(bot), bot.status_url)
-        elsif (github_state_new != :unknown && github_state_cur != github_state_new)
-          # Build has passed or failed so update status and comment on the issue
-          create_comment_for_bot_status(pr, bot)
-          create_status(pr, github_state_new, convert_bot_status_to_github_description(bot), bot.status_url)
+          if update_github
+            create_status(pr, github_state_new, bots)
+          end
         elsif (github_state_cur == :unknown || user_requested_retest(pr, bot))
           # Unknown state occurs when there's a new commit so trigger a new build
-          BotBuilder.instance.start_bot(bot.guid)
-          create_status_new_build(pr)
+          bot_builder.start_bot(bot.guid)
+          if update_github
+            create_status_new_build(pr, bots)
+          end
+        elsif (github_state_new != :unknown && github_state_cur != github_state_new)
+          if update_github
+            # Build has passed or failed so update status and comment on the issue
+            create_comment_for_bot_status(pr, bots)
+            create_status(pr, github_state_new, bots) #convert_bot_status_to_github_description(bot), bot.status_url)
+          end
         else
           puts "PR #{pr.number} (#{github_state_cur}) is up to date for bot #{bot.short_name}"
         end
@@ -55,7 +69,7 @@ class BotGithub
     bots_unprocessed.each do |bot_short_name|
       bot = bot_statuses[bot_short_name]
       # TODO: BotBuilder.instance.remove_outdated_bots(self.repo)
-      BotBuilder.instance.delete_bot(bot.guid) unless !is_managed_bot(bot)
+      self.bot_builder.delete_bot(bot.guid) unless !is_managed_bot(bot)
     end
 
     puts "-----------------------------------------------------------\nFinished Github Xcode Bot Builder #{Time.now}\n"
@@ -71,6 +85,63 @@ class BotGithub
       github_description = bot_run_sub_status.to_s.split('-').map(&:capitalize).join(' ') + "."
     end
     github_description
+  end
+
+  def convert_all_bot_status_to_github_description(bots)
+    description = bots.map do |bot| 
+      case convert_bot_status_to_github_state(bot)
+      when :error
+        bot.scheme + " Error"
+      when :failure
+        bot.scheme + " Failed (" + bot.latest_run_sub_status.to_s + ")"
+      end
+    end.compact
+
+    description.join(", ")
+  end
+
+  def convert_all_bot_status_to_url(bots)
+    bots.each do |bot| 
+      case convert_bot_status_to_github_state(bot)
+      when :error
+        return bot.status_url
+      when :failure
+        return bot.status_url
+      end
+    end
+    return nil
+  end
+
+  def convert_all_bot_status_to_github_state(bots)
+    error = false
+    failure = false
+    success = false
+    pending = false
+    bots.each do |bot|
+      case convert_bot_status_to_github_state(bot)
+      when :error
+        error = true
+      when :failure
+        failure = true
+      when :success
+        success = true
+      when :pending
+        pending = true
+      end
+    end
+
+    if pending
+      return :pending
+    elsif error
+      return :error
+    elsif failure
+      return :failure
+    elsif success
+      return :success
+    else
+      return :error
+    end
+
   end
 
   def convert_bot_status_to_github_state(bot)
@@ -90,18 +161,33 @@ class BotGithub
     github_state
   end
 
-  def create_comment_for_bot_status(pr, bot)
-    message = "Build " + convert_bot_status_to_github_state(bot).to_s.capitalize + ": " + convert_bot_status_to_github_description(bot)
-    message += "\n#{bot.status_url}"
-    self.client.add_comment(self.repo.github_repo, pr.number, message)
-    puts "PR #{pr.number} added comment \"#{message}\""
+  def create_comment_for_bot_status(pr, bots)
+    messages = {}
+    messages[:error] = Array.new
+    messages[:failure] = Array.new
+    messages[:success] = Array.new
+
+    bots.each do |bot|
+      github_state = convert_bot_status_to_github_state(bot)
+      if github_state != :unknown && github_state != :pending
+        messages[github_state].push(bot.scheme + " Build " + convert_bot_status_to_github_state(bot).to_s.capitalize + ": " + convert_bot_status_to_github_description(bot))
+        messages[github_state].push("#{bot.status_url}\n")
+      end
+    end
+    message = messages.values.join("\n").strip
+    unless message.empty?
+      self.client.add_comment(self.github_repo, pr.number, message)
+      puts "PR #{pr.number} added comment:\n#{message}"
+    end
   end
 
-  def create_status_new_build(pr)
-    create_status(pr, :pending, "Build Triggered.")
+  def create_status_new_build(pr, bots)
+    create_status(pr, :pending, bots)
   end
 
-  def create_status(pr, github_state, description = nil, target_url = nil)
+  def create_status(pr, github_state, bots)
+    description = convert_all_bot_status_to_github_description(bots)
+    target_url = convert_all_bot_status_to_url(bots)
     options = {}
     if (!description.nil?)
       options['description'] = description
@@ -109,12 +195,12 @@ class BotGithub
     if (!target_url.nil?)
       options['target_url'] = target_url
     end
-    @client.create_status(self.repo.github_repo, pr.sha, github_state.to_s, options)
+    self.client.create_status(self.github_repo, pr.sha, github_state.to_s, options)
     puts "PR #{pr.number} status updated to \"#{github_state}\" with description \"#{description}\""
   end
 
   def latest_github_state(pr)
-    statuses = self.client.statuses(self.repo.github_repo, pr.sha)
+    statuses = self.client.statuses(self.github_repo, pr.sha)
     status = OpenStruct.new
     if (statuses.count == 0)
       status.state = :unknown
@@ -127,18 +213,19 @@ class BotGithub
   end
 
   def pull_requests
-    responses = self.client.pull_requests(self.repo.github_repo)
+    responses = self.client.pull_requests(self.github_repo)
     responses.collect do |response|
       pull_request = OpenStruct.new
       pull_request.sha = response.head.sha
       pull_request.branch = response.head.ref
       pull_request.title = response.title
+      pull_request.github_repo = github_repo
       pull_request.state = response.state
       pull_request.number = response.number
       pull_request.updated_at = response.updated_at
-      pull_request.bot_short_name = bot_short_name(pr)
-      pull_request.bot_short_name_without_version = bot_short_name_without_version(pr)
-      pull_request.bot_long_name = bot_long_name(pr)
+      pull_request.bot_short_name = bot_short_name(pull_request)
+      pull_request.bot_short_name_without_version = bot_short_name_without_version(pull_request)
+      pull_request.bot_long_name = bot_long_name(pull_request)
       pull_request
     end
   end
@@ -147,7 +234,7 @@ class BotGithub
     should_retest = false
 
     # Check for a user retest request comment
-    comments = self.client.issue_comments(self.repo.github_repo, pr.number)
+    comments = self.client.issue_comments(self.github_repo, pr.number)
     latest_retest_time = Time.at(0)
     found_retest_comment = false
     comments.each do |comment|
@@ -174,7 +261,12 @@ class BotGithub
   end
 
   def bot_long_name(pr)
-    "PR #{pr.number} #{pr.title} #{self.repo.github_repo}"
+    repo = self.github_repo
+    if match = self.github_repo.match(/^([^ \/]+)\/([^ ]+)$/)
+      repo = match.captures[1]
+    end
+
+    "#{repo} ##{pr.number} #{self.scheme} #{pr.branch} #{self.github_repo}"
   end
 
   def bot_short_name(pr)
@@ -194,7 +286,7 @@ class BotGithub
   end
 
   def bot_short_name_suffix
-    ('_' + self.repo.github_repo.downcase + '_v').gsub(/[^[:alnum:]]/, '_')
+    ('_' + self.github_repo.downcase + '_' + self.scheme.downcase + '_v').gsub(/[^[:alnum:]]/, '_')
   end
 
 end
