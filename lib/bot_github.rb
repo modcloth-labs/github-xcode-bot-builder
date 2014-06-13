@@ -127,6 +127,8 @@ class BotGithub
         success = true
       when :pending
         pending = true
+      when :queued
+        pending = true
       end
     end
 
@@ -147,7 +149,12 @@ class BotGithub
   def convert_bot_status_to_github_state(bot)
     bot_run_status = bot.latest_run_status # :unknown :running :completed
     bot_run_sub_status = bot.latest_run_sub_status # :unknown :build-failed :build-errors :test-failures :warnings :analysis-issues :succeeded
-    github_state = bot_run_status == :running ? :pending : :unknown
+    github_state =  case bot_run_status
+                      when :"running", :"queued"
+                        :pending
+                      else
+                        :unknown
+                    end
     if (bot_run_status == :completed || bot_run_status == :failed)
       github_state = case bot_run_sub_status
                        when :"test-failures", :"warnings", :"analysis-issues"

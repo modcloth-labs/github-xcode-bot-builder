@@ -191,6 +191,11 @@ class BotBuilder
       bot.status_url = "http://#{@server}/xcode/bots/#{bot.tinyID}"
       bot.latest_run_status = (bot.latestRunStatus.nil? || bot.latestRunStatus.empty?) ? :unknown : bot.latestRunStatus.to_sym
       bot.latest_run_sub_status = (bot.latestRunSubStatus.nil? || bot.latestRunSubStatus.empty?) ? :unknown : bot.latestRunSubStatus.to_sym
+      if (bot.latest_run_status == :completed and integration_queued(bot.guid))
+        # Bot has been requeued
+        bot.latest_run_status = :queued
+        bot.latest_run_sub_status = :unknown
+      end
       bot.short_name = bot.tinyID
       bot.short_name_without_version = bot.short_name.sub(/_v\d*$/, '_v')
       bot.pull_request = nil
