@@ -83,8 +83,11 @@ The api_endpoint and web_endpoint urls can be configured if you use a github ent
 
 Manually run **bot-sync-github** from the command line to make sure it works.  If you have any open pull requests, a bot should have been created, and the integration started.
 
-Schedule **bot-sync-github** to run in cron every couple of minutes. Apple's strongly encourages the use of launchd.
-A simple way to do this is to put the following in /Library/LaunchDaemons/com.example.github-xcode-bot-builder.plist  *The example has everything isntalled under the user xcodebots.  If you use another user you'll want to modify the user, as well as the Label to match your organization*
+Schedule **bot-sync-github** to run in cron every couple of minutes. Apple's strongly encourages the use of **launchd**.
+
+A simple way to have it sync every 60 seconds is to put the following in /Library/LaunchDaemons/com.example.github-xcode-bot-builder.plist  
+
+*The example has everything installed under the user xcodebots.  If you use another user you'll want to modify the user, as well as the Label to match your organization*
 
 ```
 <?xml version="1.0" encoding="UTF-8"?>
