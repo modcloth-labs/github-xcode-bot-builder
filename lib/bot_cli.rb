@@ -60,14 +60,18 @@ def sync_github(args)
   client = Octokit::Client.new(:access_token => @configuration.github_access_token)
   client.login
 
+  puts "\nStarting Github Xcode Bot Builder #{Time.now}\n-----------------------------------------------------------"
+  bot_builder = BotBuilder.new(@configuration.xcode_server)
+  bot_statuses = bot_builder.status_of_all_bots
   @configuration.repos.each do |repo|
     repo.bots.each_with_index do |bot, index|
       bot_builder = BotBuilder.new(@configuration.xcode_server, repo.project_or_workspace, bot)
       github = BotGithub.new(client, bot_builder, repo.github_repo, bot.scheme)
       update_github = index == repo.bots.length-1
-      github.sync(update_github)
+      github.sync("#{repo.github_repo} - #{bot.scheme}", bot_statuses, update_github)
     end
   end
+  puts "-----------------------------------------------------------\nFinished Github Xcode Bot Builder #{Time.now}\n"
 end
 
 end

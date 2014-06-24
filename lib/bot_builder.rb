@@ -12,7 +12,7 @@ class BotBuilder
   attr_accessor :project_path
   attr_accessor :bot
 
-  def initialize(server, project_path, bot)
+  def initialize(server, project_path=nil, bot=nil)
     self.server = server
     self.project_path = project_path
     self.bot = bot

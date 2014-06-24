@@ -21,10 +21,9 @@ class BotGithub
     end.compact
   end
 
-  def sync(update_github)
-    puts "\nStarting Github Xcode Bot Builder #{Time.now}\n-----------------------------------------------------------"
+  def sync(name, bot_statuses, update_github)
+    puts "\nSync: #{name}\n-----------------------------------------------------------"
     # TODO: Need to clean up update_github, possibly by separating sync into the bot maintenance and github
-    bot_statuses = self.bot_builder.status_of_all_bots
     bots_processed = []
     pull_requests.each do |pr|
       # Check if a bot exists for this PR
@@ -71,8 +70,6 @@ class BotGithub
       # TODO: BotBuilder.instance.remove_outdated_bots(self.repo)
       self.bot_builder.delete_bot(bot.guid) unless !is_managed_bot(bot)
     end
-
-    puts "-----------------------------------------------------------\nFinished Github Xcode Bot Builder #{Time.now}\n"
   end
 
   private
@@ -117,6 +114,7 @@ class BotGithub
     failure = false
     success = false
     pending = false
+
     bots.each do |bot|
       case convert_bot_status_to_github_state(bot)
       when :error
@@ -239,7 +237,6 @@ class BotGithub
 
   def user_requested_retest(pr, bot)
     should_retest = false
-
     # Check for a user retest request comment
     comments = self.client.issue_comments(self.github_repo, pr.number)
     latest_retest_time = Time.at(0)
@@ -250,7 +247,6 @@ class BotGithub
         found_retest_comment = true
       end
     end
-
     return should_retest unless found_retest_comment
 
     # Get the latest status time
